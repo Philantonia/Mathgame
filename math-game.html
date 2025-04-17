@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Μαθηματικό Πρωτάθλημα</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive;
+            background: #f0f9ff;
+            text-align: center;
+        }
+        #game-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .heart {
+            color: red;
+            font-size: 24px;
+        }
+        #question {
+            font-size: 48px;
+            margin: 20px;
+            color: #2c3e50;
+        }
+        #timer-bar {
+            height: 10px;
+            background: #4CAF50;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+        .option-btn {
+            font-size: 24px;
+            margin: 10px;
+            padding: 15px 30px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .option-btn:hover {
+            transform: scale(1.05);
+            background: #2980b9;
+        }
+        #streak {
+            font-size: 24px;
+            color: #e67e22;
+            margin: 15px;
+        }
+        #level {
+            font-size: 20px;
+            color: #27ae60;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="lives">Ζωές: <span id="hearts">❤❤❤❤❤</span></div>
+        <div id="level">Επίπεδο: 1</div>
+        <div id="question"></div>
+        <div id="timer-bar"></div>
+        <div id="options"></div>
+        <div id="streak">Σερί σωστών: 0</div>
+    </div>
+
+    <script>
+        let lives = 5;
+        let currentLevel = 1;
+        let correctStreak = 0;
+        let timer;
+
+        const operations = [
+            // Επίπεδο 1: Προσθέσεις μονοψήφιων
+            () => {
+                const a = Math.floor(Math.random() * 9) + 1;
+                const b = Math.floor(Math.random() * 9) + 1;
+                return [`${a} + ${b} = ;`, a + b];
+            },
+            
+            // Επίπεδο 2: Προσθέσεις μέχρι 20
+            () => {
+                let a, b;
+                do {
+                    a = Math.floor(Math.random() * 15) + 1;
+                    b = Math.floor(Math.random() * 15) + 1;
+                } while(a + b > 20);
+                return [`${a} + ${b} = ;`, a + b];
+            },
+            
+            // Επίπεδο 3: Αφαιρέσεις μονοψήφιων
+            () => {
+                const a = Math.floor(Math.random() * 9) + 1;
+                const b = Math.floor(Math.random() * a) + 1;
+                return [`${a} - ${b} = ;`, a - b];
+            },
+            
+            // Επίπεδο 4: Προσθέσεις δεκάδων με μονοψήφιο
+            () => {
+                const decada = Math.floor(Math.random() * 9 + 1) * 10;
+                const monopsifio = Math.floor(Math.random() * 9) + 1;
+                return [`${decada} + ${monopsifio} = ;`, decada + monopsifio];
+            },
+            
+            // Επίπεδο 5: Αφαίρεση από 10-20
+            () => {
+                const megalos = Math.floor(Math.random() * 11) + 10;
+                const mikros = Math.floor(Math.random() * (megalos - 1)) + 1;
+                return [`${megalos} - ${mikros} = ;`, megalos - mikros];
+            },
+            
+            // Επίπεδο 6: Πρόσθεση διψήφιων
+            () => {
+                const a = Math.floor(Math.random() * 50) + 10;
+                const b = Math.floor(Math.random() * 50) + 10;
+                return [`${a} + ${b} = ;`, a + b];
+            },
+            
+            // Επίπεδο 7: Προπαίδεια 2
+            () => {
+                const b = Math.floor(Math.random() * 10) + 1;
+                return [`2 × ${b} = ;`, 2 * b];
+            },
+            
+            // Επίπεδο 8: Αφαίρεση μονοψήφιου από διψήφιο
+            () => {
+                const diplo = Math.floor(Math.random() * 90) + 10;
+                const mono = Math.floor(Math.random() * 9) + 1;
+                return [`${diplo} - ${mono} = ;`, diplo - mono];
+            },
+            
+            // Επίπεδο 9: Προπαίδεια 10
+            () => {
+                const b = Math.floor(Math.random() * 10) + 1;
+                return [`10 × ${b} = ;`, 10 * b];
+            },
+            
+            // Επίπεδο 10: Προπαίδεια 3
+            () => {
+                const b = Math.floor(Math.random() * 10) + 1;
+                return [`3 × ${b} = ;`, 3 * b];
+            }
+        ];
+
+        function generateQuestion() {
+            const [question, answer] = operations[currentLevel-1]();
+            const options = [answer];
+            
+            while(options.length < 4) {
+                let fake;
+                do {
+                    const variation = Math.floor(Math.random() * 3) + 1;
+                    fake = answer + (Math.random() > 0.5 ? variation : -variation);
+                } while(fake === answer || options.includes(fake) || fake < 0);
+                
+                options.push(fake);
+            }
+            
+            options.sort(() => Math.random() - 0.5);
+            return {question, options, answer};
+        }
+
+        function updateDisplay(questionObj) {
+            document.getElementById('question').textContent = questionObj.question;
+            document.getElementById('level').textContent = `Επίπεδο: ${currentLevel}`;
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+            questionObj.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => checkAnswer(opt === questionObj.answer);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(isCorrect) {
+            clearInterval(timer);
+            if(isCorrect) {
+                correctStreak++;
+                if(correctStreak === 10) {
+                    correctStreak = 0;
+                    if(currentLevel < operations.length) {
+                        currentLevel++;
+                        alert(`Συγχαρητήρια! Νέο επίπεδο: ${currentLevel}`);
+                    } else {
+                        alert('Τα καταφέρες! Πέρασες όλα τα επίπεδα!');
+                    }
+                }
+            } else {
+                lives--;
+                correctStreak = 0;
+                document.getElementById('hearts').textContent = '❤'.repeat(lives);
+                if(lives === 0) {
+                    alert('Τέλος παιχνιδιού!');
+                    location.reload();
+                }
+            }
+            document.getElementById('streak').textContent = `Σερί σωστών: ${correctStreak}`;
+            startNewQuestion();
+        }
+
+        function startTimer() {
+            let time = 10;
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.width = '100%';
+            timer = setInterval(() => {
+                time -= 0.1;
+                timerBar.style.width = (time/10)*100 + '%';
+                if(time <= 0) checkAnswer(false);
+            }, 100);
+        }
+
+        function startNewQuestion() {
+            const q = generateQuestion();
+            updateDisplay(q);
+            startTimer();
+        }
+
+        // Έναρξη παιχνιδιού
+        startNewQuestion();
+    </script>
+</body>
+</html>
